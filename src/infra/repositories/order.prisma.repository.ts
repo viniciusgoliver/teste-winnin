@@ -14,6 +14,7 @@ export class OrderPrismaRepository implements OrderRepository {
   async placeOrder(userId: number, items: PlaceOrderItem[]): Promise<Order> {
     if (!items?.length) throw new Error('Order items required');
 
+    // Normaliza itens somando quantidades do mesmo produto
     const qtyByProduct = new Map<number, number>();
     for (const it of items) {
       qtyByProduct.set(
@@ -29,6 +30,7 @@ export class OrderPrismaRepository implements OrderRepository {
     );
 
     return this.prisma.$transaction(async (tx) => {
+      // Busca preços atuais e valida existência
       const productIds = normalizedItems.map((i) => i.productId);
       const products = await tx.product.findMany({
         where: { id: { in: productIds } },
@@ -39,6 +41,7 @@ export class OrderPrismaRepository implements OrderRepository {
       const priceById = new Map<number, number>();
       for (const p of products) priceById.set(p.id, Number(p.price));
 
+      // Decremento atômico de estoque (seguro p/ concorrência)
       for (const it of normalizedItems) {
         const res = await tx.product.updateMany({
           where: { id: it.productId, stock: { gte: it.quantity } },
@@ -52,6 +55,7 @@ export class OrderPrismaRepository implements OrderRepository {
         }
       }
 
+      // Calcula total e cria pedido com snapshot de preço
       let total = 0;
       const createItems = normalizedItems.map((it) => {
         const price = priceById.get(it.productId)!;

@@ -21,12 +21,26 @@ export class UserPrismaRepository implements UserRepository {
 
   async findAllWithOrders(): Promise<User[]> {
     const users = await this.prisma.user.findMany({
-      include: {
-        orders: { include: { items: { include: { product: true } } } },
-      },
+      include: { orders: { include: { items: true } } },
     });
     return users.map(
       (u) => new User(u.id, u.name, u.email, u.role as any, u.createdAt),
     );
+  }
+
+  async update(
+    id: number,
+    data: Partial<{
+      name: string;
+      email: string;
+      passwordHash: string;
+      role: 'USER' | 'ADMIN';
+    }>,
+  ): Promise<User> {
+    const u = await this.prisma.user.update({
+      where: { id },
+      data,
+    });
+    return new User(u.id, u.name, u.email, u.role as any, u.createdAt);
   }
 }

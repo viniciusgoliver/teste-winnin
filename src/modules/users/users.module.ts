@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Module } from '@nestjs/common';
 import { UsersResolver } from './users.resolver';
 import { PrismaService } from '../../infra/db/prisma.service';
 import { UserPrismaRepository } from '../../infra/repositories/user.prisma.repository';
 import { CreateUserUseCase } from '../../core/application/use-cases/create-user.usecase';
 import { ListUsersUseCase } from '../../core/application/use-cases/list-users.usecase';
+import { UpdateUserUseCase } from '../../core/application/use-cases/update-user.usecase';
 
 @Module({
   providers: [
@@ -20,6 +20,11 @@ import { ListUsersUseCase } from '../../core/application/use-cases/list-users.us
     {
       provide: ListUsersUseCase,
       useFactory: (repo: any) => new ListUsersUseCase(repo),
+      inject: ['UserRepository'],
+    },
+    {
+      provide: UpdateUserUseCase,
+      useFactory: (repo: any) => new UpdateUserUseCase(repo),
       inject: ['UserRepository'],
     },
   ],

@@ -11,6 +11,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../../infra/db/prisma.service';
+import { PaginationInput } from 'src/core/application/dto/pagination.input';
 
 @ObjectType('OrderItem')
 class OrderItemGQL {
@@ -29,6 +30,15 @@ class OrderGQL {
   @Field(() => [OrderItemGQL]) items!: OrderItemGQL[];
 }
 
+@ObjectType('OrderPage')
+class OrderPage {
+  @Field(() => [OrderGQL]) items!: OrderGQL[];
+  @Field(() => Int) total!: number;
+  @Field(() => Int) page!: number;
+  @Field(() => Int) limit!: number;
+  @Field() hasNext!: boolean;
+}
+
 @Resolver(() => OrderGQL)
 @UseFilters(DomainExceptionFilter)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -38,12 +48,14 @@ export class OrdersResolver {
     private prisma: PrismaService,
   ) {}
 
+  // Sem userId no input — pega do token
   @Mutation(() => OrderGQL)
   @Roles('USER', 'ADMIN')
   placeOrder(@Args('input') input: PlaceOrderInput, @CurrentUser() user: any) {
     return this.placeOrderUC.execute(user.sub, input.items);
   }
 
+  // Todos os pedidos (ADMIN)
   @Query(() => [OrderGQL])
   @Roles('ADMIN')
   async orders() {
@@ -65,6 +77,7 @@ export class OrdersResolver {
     }));
   }
 
+  // Meus pedidos (USER/ADMIN)
   @Query(() => [OrderGQL])
   @Roles('USER', 'ADMIN')
   async myOrders(@CurrentUser() user: any) {
@@ -85,5 +98,85 @@ export class OrdersResolver {
         price: Number(i.price),
       })),
     }));
+  }
+
+  @Query(() => OrderPage)
+  @Roles('ADMIN')
+  async ordersPage(
+    @Args('pagination', { type: () => PaginationInput, nullable: true })
+    pagination?: PaginationInput,
+  ) {
+    const page = pagination?.page ?? 1;
+    const limit = pagination?.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [rows, total] = await Promise.all([
+      this.prisma.order.findMany({
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' },
+        include: { items: true },
+      }),
+      this.prisma.order.count(),
+    ]);
+    return {
+      items: rows.map((o) => ({
+        id: o.id,
+        userId: o.userId,
+        total: Number(o.total),
+        createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          id: i.id,
+          productId: i.productId,
+          quantity: i.quantity,
+          price: Number(i.price),
+        })),
+      })),
+      total,
+      page,
+      limit,
+      hasNext: skip + rows.length < total,
+    };
+  }
+
+  @Query(() => OrderPage)
+  @Roles('USER', 'ADMIN')
+  async myOrdersPage(
+    @CurrentUser() user: any,
+    @Args('pagination', { type: () => PaginationInput, nullable: true })
+    pagination?: PaginationInput,
+  ) {
+    const page = pagination?.page ?? 1;
+    const limit = pagination?.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [rows, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { userId: user.sub },
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' },
+        include: { items: true },
+      }),
+      this.prisma.order.count({ where: { userId: user.sub } }),
+    ]);
+    return {
+      items: rows.map((o) => ({
+        id: o.id,
+        userId: o.userId,
+        total: Number(o.total),
+        createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          id: i.id,
+          productId: i.productId,
+          quantity: i.quantity,
+          price: Number(i.price),
+        })),
+      })),
+      total,
+      page,
+      limit,
+      hasNext: skip + rows.length < total,
+    };
   }
 }

@@ -29,4 +29,15 @@ export class ProductPrismaRepository implements ProductRepository {
       (p) => new Product(p.id, p.name, Number(p.price), p.stock, p.createdAt),
     );
   }
+
+  async update(
+    id: number,
+    data: Partial<Pick<Product, 'name' | 'price' | 'stock'>>,
+  ): Promise<Product> {
+    const p = await this.prisma.product.update({
+      where: { id },
+      data,
+    });
+    return new Product(p.id, p.name, Number(p.price), p.stock, p.createdAt);
+  }
 }
