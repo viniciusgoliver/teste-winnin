@@ -53,7 +53,7 @@ src/
 │   ├── auth/             # JWT, Guards, Decorators e Resolvers
 │   ├── users/
 │   ├── products/
-│   └── orders/
+│   └── winnin/
 └── main.ts               # Ponto de entrada da aplicação
 ```
 
@@ -73,7 +73,7 @@ src/
 Crie um arquivo `.env` na raiz:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/orders?schema=public
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/winnin?schema=public
 
 JWT_SECRET=supersecret
 JWT_EXPIRES=15m
@@ -240,7 +240,7 @@ O pipeline executa as seguintes etapas:
 ### 1. `Invalid credentials`
 - Certifique-se que os usuários do seed foram criados:
 ```bash
-docker compose exec db psql -U postgres -d orders -c 'SELECT id, email, role FROM "User";'
+docker compose exec db psql -U postgres -d winnin -c 'SELECT id, email, role FROM "User";'
 ```
 
 - Para resetar senha do admin:
@@ -266,7 +266,7 @@ docker compose exec api node -e "const bcrypt=require('bcrypt'); const {PrismaCl
 ## 👨‍💻 Autor
 
 Vinícius Oliveira  
-📧 [vinicius@softpulse.tech](mailto:vinicius@softpulse.tech)  
+📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
 🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
 
 
@@ -505,7 +505,7 @@ mutation PlaceOrder {
 
 # (ADMIN) Listar todos os pedidos
 query OrdersAll {
-  orders {
+  winnin {
     id
     userId
     total
@@ -535,7 +535,7 @@ query MyOrders {
 
 # (ADMIN) Página de pedidos com filtros e ordenação
 query OrdersPageFiltered($page: Int = 1, $limit: Int = 5, $userId: Int = 1) {
-  ordersPage(
+  winninPage(
     pagination: { page: $page, limit: $limit }
     filter: {
       userId: $userId
