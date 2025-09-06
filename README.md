@@ -263,16 +263,6 @@ docker compose exec api node -e "const bcrypt=require('bcrypt'); const {PrismaCl
 
 ---
 
-## 👨‍💻 Autor
-
-Vinícius Oliveira  
-📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
-🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
-
-
-
----
-
 ## 📜 Exemplos de Queries e Mutations (Completo)
 
 > Abaixo estão **todas as queries e mutations** disponíveis, já formatadas para uso no **GraphQL Playground**.
@@ -599,3 +589,11 @@ mutation OutOfStock {
 }
 
 ```
+
+---
+
+## 👨‍💻 Autor
+
+Vinícius Oliveira  
+📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
+🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
