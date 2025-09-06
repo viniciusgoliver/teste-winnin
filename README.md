@@ -313,6 +313,131 @@ O pipeline executa as seguintes etapas:
 
 ---
 
+
+---
+
+## 🐳 Fluxo via Docker (com Makefile)
+
+Para facilitar o uso no dia a dia, há um **Makefile** com atalhos para Docker, Prisma e App.
+
+### Serviços
+- **API**: `orders_api` (container da aplicação NestJS)
+- **DB**: `orders_db` (container PostgreSQL com database **winnin**)
+
+> Os nomes dos serviços acima devem coincidir com o `docker-compose.yml`.  
+> Caso use outros nomes, ajuste as variáveis `API` e `DB` no Makefile.
+
+### Atalhos principais
+
+```makefile
+# ====== Vars ======
+SHELL := /bin/bash
+DOCKER := docker compose
+API := orders_api
+DB := orders_db
+
+# ====== Docker ======
+up:
+	$(DOCKER) up -d --build
+
+up-dev:
+	$(DOCKER) up --build
+
+down:
+	$(DOCKER) down
+
+logs:
+	$(DOCKER) logs -f $(API)
+
+sh:
+	$(DOCKER) exec -it $(API) sh
+
+sh-db:
+	$(DOCKER) exec -it $(DB) sh -lc 'psql -U postgres -d winnin'
+
+# ====== Prisma / DB ======
+migrate:
+	npx prisma migrate dev
+
+deploy:
+	npx prisma migrate deploy
+
+generate:
+	npx prisma generate
+
+seed:
+	npm run prisma:seed
+
+reset-db:
+	npm run reset:db
+
+studio:
+	npx prisma studio
+
+# ====== App local ======
+dev:
+	npm run start:dev
+
+build:
+	npm run build
+
+start:
+	npm run start:prod
+
+# ====== Util ======
+health:
+	curl -s http://localhost:3000/health | jq .
+
+graphql:
+	open http://localhost:3000/graphql || xdg-open http://localhost:3000/graphql || true
+```
+
+### Exemplos de uso
+
+```bash
+# Sobe tudo com build (detached)
+make up
+
+# Sobe em modo interativo (mostra logs durante o build)
+make up-dev
+
+# Ver logs da API em tempo real
+make logs
+
+# Entrar no shell do container da API
+make sh
+
+# Abrir psql no DB 'winnin'
+make sh-db
+
+# Gerar Prisma Client
+make generate
+
+# Aplicar migrations em dev
+make migrate
+
+# Aplicar migrations em deploy (prod)
+make deploy
+
+# Rodar seed (seeds TypeScript)
+make seed
+
+# Abrir Prisma Studio (GUI do banco)
+make studio
+
+# Checar healthcheck local
+make health
+
+# Abrir o GraphQL Playground no navegador
+make graphql
+
+# Parar e remover containers
+make down
+```
+
+> **Dica**: se o banco já foi populado com `RUN_SEED=true` no `docker-compose.yml`, você pode desativar depois para iniciar mais rápido.
+
+
 ## 🐛 Troubleshooting
 
 ### 1. `Invalid credentials`
