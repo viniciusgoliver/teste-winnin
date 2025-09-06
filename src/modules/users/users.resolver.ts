@@ -19,6 +19,13 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../infra/db/prisma.service';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UpdateUserUseCase } from '../../core/application/use-cases/update-user.usecase';
+// ✅ caminho correto do PaginationInput
+
+import { UsersFilterInput } from './dto/users.filter.input';
+import { UsersSortInput, UserSortField } from './dto/users.sort.input';
+import { OrderDirection } from '../../common/dto/sort.input';
+// ✅ tipagens Prisma para where/orderBy/sort
+import { Prisma } from '@prisma/client';
 import { PaginationInput } from 'src/core/application/dto/pagination.input';
 
 @ObjectType('UserOrderItem')
@@ -110,20 +117,50 @@ export class UsersResolver {
 
   @Query(() => UserPage)
   async usersPage(
-    @Args('pagination', { type: () => PaginationInput, nullable: true })
-    pagination?: PaginationInput,
+    @Args('pagination', { type: () => PaginationInput, nullable: true }) pagination?: PaginationInput,
+    @Args('filter', { type: () => UsersFilterInput, nullable: true }) filter?: UsersFilterInput,
+    @Args('sort', { type: () => UsersSortInput, nullable: true }) sort?: UsersSortInput,
   ) {
     const page = pagination?.page ?? 1;
     const limit = pagination?.limit ?? 10;
     const skip = (page - 1) * limit;
 
+    const where: Prisma.UserWhereInput = {};
+    if (filter?.nameContains) where.name = { contains: filter.nameContains, mode: 'insensitive' };
+    if (filter?.emailEquals) where.email = filter.emailEquals;
+    if (filter?.role) where.role = filter.role;
+    if (filter?.createdAt) {
+      const dr = filter.createdAt;
+      where.createdAt = {};
+      if (dr.from) where.createdAt.gte = dr.from;
+      if (dr.to) where.createdAt.lte = dr.to;
+      if (!Object.keys(where.createdAt).length) delete where.createdAt;
+    }
+
+    // ✅ Prisma.SortOrder e tipo explícito no orderBy
+    const dir: Prisma.SortOrder =
+      (sort?.direction ?? OrderDirection.DESC) === OrderDirection.ASC ? 'asc' : 'desc';
+
+    let orderBy: Prisma.UserOrderByWithRelationInput;
+    switch (sort?.field) {
+      case UserSortField.NAME:
+        orderBy = { name: dir };
+        break;
+      case UserSortField.EMAIL:
+        orderBy = { email: dir };
+        break;
+      case UserSortField.ROLE:
+        orderBy = { role: dir };
+        break;
+      case UserSortField.CREATED_AT:
+      default:
+        orderBy = { id: dir }; // proxy para createdAt desc
+        break;
+    }
+
     const [rows, total] = await Promise.all([
-      this.prisma.user.findMany({
-        skip,
-        take: limit,
-        orderBy: { id: 'desc' },
-      }),
-      this.prisma.user.count(),
+      this.prisma.user.findMany({ where, orderBy, skip, take: limit }),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
@@ -131,7 +168,7 @@ export class UsersResolver {
         id: u.id,
         name: u.name,
         email: u.email,
-        role: u.role,
+        role: u.role as any,
         createdAt: u.createdAt,
       })),
       total,

@@ -11,6 +11,14 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../../infra/db/prisma.service';
+// ✅ caminho correto
+
+
+import { OrdersFilterInput } from './dto/orders.filter.input';
+import { OrdersSortInput, OrderSortField } from './dto/orders.sort.input';
+import { OrderDirection } from '../../common/dto/sort.input';
+// ✅ tipagens Prisma
+import { Prisma } from '@prisma/client';
 import { PaginationInput } from 'src/core/application/dto/pagination.input';
 
 @ObjectType('OrderItem')
@@ -59,10 +67,11 @@ export class OrdersResolver {
   @Query(() => [OrderGQL])
   @Roles('ADMIN')
   async orders() {
-    const rows = await this.prisma.order.findMany({
+    const rows = (await this.prisma.order.findMany({
       include: { items: true },
       orderBy: { id: 'desc' },
-    });
+    })) as Array<Prisma.OrderGetPayload<{ include: { items: true } }>>;
+
     return rows.map((o) => ({
       id: o.id,
       userId: o.userId,
@@ -81,11 +90,12 @@ export class OrdersResolver {
   @Query(() => [OrderGQL])
   @Roles('USER', 'ADMIN')
   async myOrders(@CurrentUser() user: any) {
-    const rows = await this.prisma.order.findMany({
+    const rows = (await this.prisma.order.findMany({
       where: { userId: user.sub },
       include: { items: true },
       orderBy: { id: 'desc' },
-    });
+    })) as Array<Prisma.OrderGetPayload<{ include: { items: true } }>>;
+
     return rows.map((o) => ({
       id: o.id,
       userId: o.userId,
@@ -103,22 +113,57 @@ export class OrdersResolver {
   @Query(() => OrderPage)
   @Roles('ADMIN')
   async ordersPage(
-    @Args('pagination', { type: () => PaginationInput, nullable: true })
-    pagination?: PaginationInput,
+    @Args('pagination', { type: () => PaginationInput, nullable: true }) pagination?: PaginationInput,
+    @Args('filter', { type: () => OrdersFilterInput, nullable: true }) filter?: OrdersFilterInput,
+    @Args('sort', { type: () => OrdersSortInput, nullable: true }) sort?: OrdersSortInput,
   ) {
     const page = pagination?.page ?? 1;
     const limit = pagination?.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const [rows, total] = await Promise.all([
-      this.prisma.order.findMany({
-        skip,
-        take: limit,
-        orderBy: { id: 'desc' },
-        include: { items: true },
-      }),
-      this.prisma.order.count(),
-    ]);
+    const where: Prisma.OrderWhereInput = {};
+    if (filter?.userId) where.userId = filter.userId;
+    if (filter?.totalMin !== undefined || filter?.totalMax !== undefined) {
+      where.total = {};
+      if (filter.totalMin !== undefined) where.total.gte = filter.totalMin;
+      if (filter.totalMax !== undefined) where.total.lte = filter.totalMax;
+    }
+    if (filter?.createdAt) {
+      const dr = filter.createdAt;
+      where.createdAt = {};
+      if (dr.from) where.createdAt.gte = dr.from;
+      if (dr.to) where.createdAt.lte = dr.to;
+      if (!Object.keys(where.createdAt).length) delete where.createdAt;
+    }
+
+    const dir: Prisma.SortOrder =
+      (sort?.direction ?? OrderDirection.DESC) === OrderDirection.ASC ? 'asc' : 'desc';
+
+    let orderBy: Prisma.OrderOrderByWithRelationInput;
+    switch (sort?.field) {
+      case OrderSortField.TOTAL:
+        orderBy = { total: dir };
+        break;
+      case OrderSortField.ID:
+        orderBy = { id: dir };
+        break;
+      case OrderSortField.CREATED_AT:
+      default:
+        // se createdAt existir como campo ordenável no schema, use { createdAt: dir }
+        // como proxy padrão, usamos id
+        orderBy = { id: dir };
+        break;
+    }
+
+    const rows = (await this.prisma.order.findMany({
+      where,
+      orderBy,
+      skip,
+      take: limit,
+      include: { items: true },
+    })) as Array<Prisma.OrderGetPayload<{ include: { items: true } }>>;
+    const total = await this.prisma.order.count({ where });
+
     return {
       items: rows.map((o) => ({
         id: o.id,
@@ -143,23 +188,54 @@ export class OrdersResolver {
   @Roles('USER', 'ADMIN')
   async myOrdersPage(
     @CurrentUser() user: any,
-    @Args('pagination', { type: () => PaginationInput, nullable: true })
-    pagination?: PaginationInput,
+    @Args('pagination', { type: () => PaginationInput, nullable: true }) pagination?: PaginationInput,
+    @Args('filter', { type: () => OrdersFilterInput, nullable: true }) filter?: OrdersFilterInput,
+    @Args('sort', { type: () => OrdersSortInput, nullable: true }) sort?: OrdersSortInput,
   ) {
     const page = pagination?.page ?? 1;
     const limit = pagination?.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const [rows, total] = await Promise.all([
-      this.prisma.order.findMany({
-        where: { userId: user.sub },
-        skip,
-        take: limit,
-        orderBy: { id: 'desc' },
-        include: { items: true },
-      }),
-      this.prisma.order.count({ where: { userId: user.sub } }),
-    ]);
+    const where: Prisma.OrderWhereInput = { userId: user.sub };
+    if (filter?.totalMin !== undefined || filter?.totalMax !== undefined) {
+      where.total = {};
+      if (filter.totalMin !== undefined) where.total.gte = filter.totalMin;
+      if (filter.totalMax !== undefined) where.total.lte = filter.totalMax;
+    }
+    if (filter?.createdAt) {
+      const dr = filter.createdAt;
+      where.createdAt = {};
+      if (dr.from) where.createdAt.gte = dr.from;
+      if (dr.to) where.createdAt.lte = dr.to;
+      if (!Object.keys(where.createdAt).length) delete where.createdAt;
+    }
+
+    const dir: Prisma.SortOrder =
+      (sort?.direction ?? OrderDirection.DESC) === OrderDirection.ASC ? 'asc' : 'desc';
+
+    let orderBy: Prisma.OrderOrderByWithRelationInput;
+    switch (sort?.field) {
+      case OrderSortField.TOTAL:
+        orderBy = { total: dir };
+        break;
+      case OrderSortField.ID:
+        orderBy = { id: dir };
+        break;
+      case OrderSortField.CREATED_AT:
+      default:
+        orderBy = { id: dir };
+        break;
+    }
+
+    const rows = (await this.prisma.order.findMany({
+      where,
+      orderBy,
+      skip,
+      take: limit,
+      include: { items: true },
+    })) as Array<Prisma.OrderGetPayload<{ include: { items: true } }>>;
+    const total = await this.prisma.order.count({ where });
+
     return {
       items: rows.map((o) => ({
         id: o.id,

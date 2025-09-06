@@ -20,7 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
+    "reset:db": "ts-node --transpile-only prisma/reset.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.11.0",
@@ -63,7 +65,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.9.2"
   },
   "jest": {
     "moduleFileExtensions": [

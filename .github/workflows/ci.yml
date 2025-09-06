@@ -2,58 +2,59 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     services:
       postgres:
-        image: postgres:16-alpine
-        ports:
-          - 5432:5432
+        image: postgres:15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: orders
+          POSTGRES_DB: winnin
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d orders"
-          --health-interval 5s
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/orders?schema=public
-      JWT_SECRET: test-secret
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/winnin?schema=public
+      JWT_SECRET: supersecret
       JWT_EXPIRES: 15m
       JWT_REFRESH_EXPIRES: 7d
+      RUN_SEED: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install deps
-        run: npm ci
+      - name: 📦 Install dependencies
+        run: yarn install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: npx prisma generate
+      - name: 🔄 Generate Prisma Client
+        run: yarn prisma generate
 
-      - name: Run migrations
-        run: npx prisma migrate deploy
+      - name: 🛠️ Run Migrations
+        run: yarn prisma migrate deploy
 
-      - name: Lint
-        run: npm run lint --if-present
+      - name: 🌱 Run Seed
+        run: yarn ts-node --transpile-only --compiler-options '{"module":"CommonJS","moduleResolution":"Node"}' prisma/seed.ts
 
-      - name: Build
-        run: npm run build
+      - name: 🧪 Run Tests
+        run: yarn test
 
-      # Se quiser testes:
-      # - name: Test
-      #   run: npm test -- --ci
+      - name: 🔍 Build Project
+        run: yarn build

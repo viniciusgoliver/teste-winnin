@@ -9,12 +9,3 @@ export class AuthUser {
   @Field(() => RoleGQL) role!: RoleGQL;
   @Field() createdAt!: Date;
 }
-
-@ObjectType('AuthPayload')
-export class AuthPayload {
-  @Field() accessToken!: string;
-  @Field() refreshToken!: string;
-
-  @Field(() => AuthUser)
-  user!: AuthUser;
-}
