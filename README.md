@@ -39,23 +39,101 @@ O objetivo é fornecer uma solução **performática, segura e escalável** com 
 
 ## 📂 Estrutura do Projeto
 
+
 ```bash
 src/
-├── common/               # Filtros, DTOs e utilitários globais
-├── core/                 # Camada de Domínio + Casos de Uso (DDD)
-│   ├── domain/           # Entidades e regras de negócio
-│   ├── application/      # Use Cases + DTOs
-│   └── ports/            # Interfaces de repositórios
-├── infra/                # Infraestrutura
-│   ├── db/               # Configuração do Prisma
-│   └── repositories/     # Implementações concretas (Prisma)
-├── modules/              # Módulos da aplicação
-│   ├── auth/             # JWT, Guards, Decorators e Resolvers
-│   ├── users/
+├── app.module.ts
+├── common/
+│   ├── dto/
+│   │   ├── date-range.input.ts
+│   │   └── sort.input.ts
+│   └── filters/
+│       └── domain-exception.filter.ts
+├── core/
+│   ├── application/
+│   │   ├── dto/
+│   │   │   ├── create-product.dto.ts
+│   │   │   ├── create-user.dto.ts
+│   │   │   ├── pagination.input.ts
+│   │   │   └── place-order.dto.ts
+│   │   └── use-cases/
+│   │       ├── create-product.usecase.ts
+│   │       ├── create-user.usecase.ts
+│   │       ├── list-products.usecase.ts
+│   │       ├── list-users.usecase.ts
+│   │       ├── place-order.usecase.ts
+│   │       ├── update-product.usecase.ts
+│   │       └── update-user.usecase.ts
+│   ├── domain/
+│   │   ├── entities/
+│   │   │   ├── order-item.entity.ts
+│   │   │   ├── order.entity.ts
+│   │   │   ├── product.entity.ts
+│   │   │   └── user.entity.ts
+│   │   └── errors/
+│   │       └── out-of-stock.error.ts
+│   └── ports/
+│       └── repositories/
+│           ├── order.repository.ts
+│           ├── product.repository.ts
+│           └── user.repository.ts
+├── health/
+│   ├── health.controller.ts
+│   └── health.module.ts
+├── infra/
+│   ├── db/
+│   │   └── prisma.service.ts
+│   └── repositories/
+│       ├── order.prisma.repository.ts
+│       ├── product.prisma.repository.ts
+│       └── user.prisma.repository.ts
+├── modules/
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   ├── auth.resolver.ts
+│   │   ├── auth.service.ts
+│   │   ├── decorators/
+│   │   │   ├── current-user.decorator.ts
+│   │   │   └── roles.decorator.ts
+│   │   ├── dto/
+│   │   │   ├── auth-user.type.ts
+│   │   │   ├── auth.payload.ts
+│   │   │   ├── login.input.ts
+│   │   │   └── signup.input.ts
+│   │   ├── guards/
+│   │   │   ├── gql-auth.guard.ts
+│   │   │   └── roles.guard.ts
+│   │   ├── models/
+│   │   │   ├── auth.output.ts
+│   │   │   └── jwt-user.ts
+│   │   └── strategies/
+│   │       └── jwt.strategy.ts
+│   ├── orders/
+│   │   ├── dto/
+│   │   │   ├── orders.filter.input.ts
+│   │   │   ├── orders.sort.input.ts
+│   │   │   └── place-order.input.ts
+│   │   ├── orders.module.ts
+│   │   └── orders.resolver.ts
 │   ├── products/
-│   └── winnin/
-└── main.ts               # Ponto de entrada da aplicação
+│   │   ├── dto/
+│   │   │   ├── create-product.input.ts
+│   │   │   ├── products.filter.input.ts
+│   │   │   ├── products.sort.input.ts
+│   │   │   └── update-product.input.ts
+│   │   ├── products.module.ts
+│   │   └── products.resolver.ts
+│   └── users/
+│       ├── dto/
+│       │   ├── create-user.input.ts
+│       │   ├── update-user.input.ts
+│       │   ├── users.filter.input.ts
+│       │   └── users.sort.input.ts
+│       ├── users.module.ts
+│       └── users.resolver.ts
+└── main.ts
 ```
+
 
 ---
 
@@ -260,6 +338,16 @@ docker compose exec api node -e "const bcrypt=require('bcrypt'); const {PrismaCl
   ]
 }
 ```
+
+---
+
+## 👨‍💻 Autor
+
+Vinícius Oliveira  
+📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
+🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
+
+
 
 ---
 
@@ -589,11 +677,3 @@ mutation OutOfStock {
 }
 
 ```
-
----
-
-## 👨‍💻 Autor
-
-Vinícius Oliveira  
-📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
-🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
