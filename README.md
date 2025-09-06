@@ -267,19 +267,69 @@ Exemplos disponíveis no arquivo:
 
 ---
 
+
 ## 🧪 Testes Automatizados
 
-Rodar testes unitários:
+O projeto possui dois tipos de testes configurados:
+
+- **Testes Unitários** → Validam casos de uso, serviços e repositórios de forma isolada.
+- **Testes E2E (End-to-End)** → Validam os fluxos completos via **GraphQL**, integrando banco de dados, resolvers e autenticação.
+
+---
+
+### 🔹 1. Executar somente os testes unitários
+
 ```bash
 yarn test
 ```
 
-Rodar testes e2e:
+> Os testes unitários estão localizados em:
+> `test/**/*.spec.ts`
+
+---
+
+### 🔹 2. Executar somente os testes E2E
+
+Os testes E2E validam os fluxos completos via **GraphQL**, incluindo:
+
+- Autenticação e roles (USER / ADMIN)
+- Criação e atualização de produtos
+- Realização de pedidos com controle de estoque
+- Paginação, filtros e ordenação
+
 ```bash
 yarn test:e2e
 ```
 
+> Os testes E2E estão localizados em:
+> `test/**/*.e2e-spec.ts`
+
 ---
+
+### 🔹 3. Executar todos os testes (unit + e2e)
+
+```bash
+yarn test:all
+```
+
+> Este comando executa ambos os tipos de testes na sequência.
+
+---
+
+### 🔹 4. Preparar ambiente para E2E manualmente (opcional)
+
+Caso queira rodar apenas os testes E2E com banco de dados limpo:
+
+```bash
+# Aplica migrations
+yarn testdb:migrate
+
+# Popula o banco com dados iniciais
+yarn testdb:seed
+
+# Executa os testes E2E
+yarn test:e2e
+```
 
 ## 🩺 Health Check
 
@@ -470,7 +520,6 @@ docker compose exec api node -e "const bcrypt=require('bcrypt'); const {PrismaCl
 
 Vinícius Oliveira  
 📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
-🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
 
 
 
@@ -739,6 +788,348 @@ query MyOrders {
 # (ADMIN) Página de pedidos com filtros e ordenação
 query OrdersPageFiltered($page: Int = 1, $limit: Int = 5, $userId: Int = 1) {
   winninPage(
+    pagination: { page: $page, limit: $limit }
+    filter: {
+      userId: $userId
+      totalMin: 50
+      totalMax: 1000
+      createdAt: { from: "2025-08-01T00:00:00.000Z" }
+    }
+    sort: { field: TOTAL, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      userId
+      total
+      createdAt
+      items {
+        id
+        productId
+        quantity
+        price
+      }
+    }
+  }
+}
+
+# (USER/ADMIN) Minha página de pedidos
+query MyOrdersPage($page: Int = 1, $limit: Int = 5) {
+  myOrdersPage(
+    pagination: { page: $page, limit: $limit }
+    filter: { totalMin: 0, createdAt: { from: "2025-08-20T00:00:00.000Z" } }
+    sort: { field: CREATED_AT, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      total
+      createdAt
+      items {
+        productId
+        quantity
+        price
+      }
+    }
+  }
+}
+
+############################################
+# TESTE DE ERRO OUT_OF_STOCK
+############################################
+
+mutation OutOfStock {
+  placeOrder(input: { items: [{ productId: 1, quantity: 9999 }] }) {
+    id
+  }
+}
+
+```
+
+---
+
+## 📌 Exemplos de Queries & Mutations (GraphQL Playground)
+
+> Cole qualquer bloco abaixo no **GraphQL Playground** (`/graphql`).  
+> Para rotas protegidas, inclua o header **Authorization: Bearer <token>** no Playground (aba "HTTP HEADERS").
+
+```json
+{
+  "Authorization": "Bearer <SEU_TOKEN_JWT_AQUI>"
+}
+```
+
+### 🔑 Dica
+- Faça **signup** ou **login** primeiro para obter o `accessToken`.
+- Use o token no header para executar queries/mutations protegidas.
+
+### 🧩 Blocos prontos
+
+```graphql
+############################################
+# AUTH
+############################################
+
+# Signup (cria um usuário padrão USER)
+mutation Signup {
+  signup(
+    input: { name: "João Teste", email: "joao@acme.com", password: "secret123" }
+  ) {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Login
+mutation Login {
+  login(input: { email: "admin@teste.com", password: "admin123" }) {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Refresh Token (requer Authorization)
+mutation Refresh {
+  refresh {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Me (usuário autenticado)
+query Me {
+  me {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+############################################
+# PRODUCTS
+############################################
+
+# (ADMIN) Criar produto
+mutation CreateProduct {
+  createProduct(input: { name: "Teclado Mecânico", price: 299.90, stock: 12 }) {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# (ADMIN) Atualizar produto
+mutation UpdateProduct {
+  updateProduct(input: { id: 1, price: 219.90, stock: 8 }) {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# Listar todos os produtos
+query ProductsAll {
+  products {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# Página de produtos com filtros e ordenação
+query ProductsPageFiltered(
+  $page: Int = 1
+  $limit: Int = 5
+  $name: String = "prod"
+  $priceMin: Float = 100
+  $priceMax: Float = 400
+) {
+  productsPage(
+    pagination: { page: $page, limit: $limit }
+    filter: {
+      nameContains: $name
+      priceMin: $priceMin
+      priceMax: $priceMax
+      stockMin: 1
+    }
+    sort: { field: PRICE, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      name
+      price
+      stock
+      createdAt
+    }
+  }
+}
+
+############################################
+# USERS
+############################################
+
+# (ADMIN) Criar usuário
+mutation CreateUser {
+  createUser(
+    input: {
+      name: "Maria Admin"
+      email: "maria.admin@acme.com"
+      password: "admin123"
+      role: ADMIN
+    }
+  ) {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# (ADMIN) Atualizar usuário
+mutation UpdateUser {
+  updateUser(input: { id: 2, name: "User Renomeado", role: USER }) {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# Listar todos os usuários
+query UsersAll {
+  users {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# Página de usuários com filtros e ordenação
+query UsersPageFiltered(
+  $page: Int = 1
+  $limit: Int = 10
+  $role: Role = USER
+  $from: DateTime = "2025-09-01T00:00:00.000Z"
+) {
+  usersPage(
+    pagination: { page: $page, limit: $limit }
+    filter: { role: $role, nameContains: "a", createdAt: { from: $from } }
+    sort: { field: NAME, direction: ASC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+############################################
+# ORDERS
+############################################
+
+# (USER/ADMIN) Criar pedido
+mutation PlaceOrder {
+  placeOrder(
+    input: {
+      items: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }]
+    }
+  ) {
+    id
+    userId
+    total
+    createdAt
+    items {
+      id
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (ADMIN) Listar todos os pedidos
+query OrdersAll {
+  orders {
+    id
+    userId
+    total
+    createdAt
+    items {
+      id
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (USER/ADMIN) Meus pedidos
+query MyOrders {
+  myOrders {
+    id
+    total
+    createdAt
+    items {
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (ADMIN) Página de pedidos com filtros e ordenação
+query OrdersPageFiltered($page: Int = 1, $limit: Int = 5, $userId: Int = 1) {
+  ordersPage(
     pagination: { page: $page, limit: $limit }
     filter: {
       userId: $userId

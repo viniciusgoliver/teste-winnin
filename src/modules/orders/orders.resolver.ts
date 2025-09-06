@@ -59,8 +59,28 @@ export class OrdersResolver {
   // Sem userId no input — pega do token
   @Mutation(() => OrderGQL)
   @Roles('USER', 'ADMIN')
-  placeOrder(@Args('input') input: PlaceOrderInput, @CurrentUser() user: any) {
-    return this.placeOrderUC.execute(user.sub, input.items);
+  async placeOrder(@Args('input') input: PlaceOrderInput, @CurrentUser() user: any) {
+    const created = await this.placeOrderUC.execute(user.sub, input.items);
+
+    // Busca o pedido completo com items
+    const row = await this.prisma.order.findUnique({
+      where: { id: created.id },
+      include: { items: true },
+    });
+
+    // Mapeia para o tipo GQL esperado
+    return {
+      id: row!.id,
+      userId: row!.userId,
+      total: Number(row!.total),
+      createdAt: row!.createdAt,
+      items: row!.items.map(i => ({
+        id: i.id,
+        productId: i.productId,
+        quantity: i.quantity,
+        price: Number(i.price),
+      })),
+    };
   }
 
   // Todos os pedidos (ADMIN)
