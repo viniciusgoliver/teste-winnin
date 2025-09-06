@@ -219,8 +219,8 @@ O seed cria **2 usuários**, **20 produtos** e **10 pedidos de exemplo**:
 
 | Usuário      | E-mail            | Senha     | Role  |
 |-------------|--------------------|-----------|-------|
-| Admin       | admin@teste.com    | admin123  | ADMIN |
-| User Padrão | user@teste.com     | user123   | USER  |
+| Admin       | admin@teste.com    | 123456  | ADMIN |
+| User Padrão | user@teste.com     | 123456   | USER  |
 
 ---
 
