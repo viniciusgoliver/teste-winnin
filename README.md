@@ -265,5 +265,337 @@ docker compose exec api node -e "const bcrypt=require('bcrypt'); const {PrismaCl
 
 ## 👨‍💻 Autor
 
-Vinícius G. Oliveira  
-📧 [vinicius.oliver@gmail.com](mailto:vinicius.oliver@gmail.com)  
+Vinícius Oliveira  
+📧 [vinicius@softpulse.tech](mailto:vinicius@softpulse.tech)  
+🔗 [LinkedIn](https://www.linkedin.com/in/vinicius-oliveira/)
+
+
+
+---
+
+## 📜 Exemplos de Queries e Mutations (Completo)
+
+> Abaixo estão **todas as queries e mutations** disponíveis, já formatadas para uso no **GraphQL Playground**.
+
+```graphql
+############################################
+# AUTH
+############################################
+
+# Signup (cria um usuário padrão USER)
+mutation Signup {
+  signup(
+    input: { name: "João Teste", email: "joao@acme.com", password: "secret123" }
+  ) {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Login
+mutation Login {
+  login(input: { email: "admin@teste.com", password: "admin123" }) {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Refresh Token (requer Authorization)
+mutation Refresh {
+  refresh {
+    accessToken
+    refreshToken
+    user {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Me (usuário autenticado)
+query Me {
+  me {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+############################################
+# PRODUCTS
+############################################
+
+# (ADMIN) Criar produto
+mutation CreateProduct {
+  createProduct(input: { name: "Teclado Mecânico", price: 299.90, stock: 12 }) {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# (ADMIN) Atualizar produto
+mutation UpdateProduct {
+  updateProduct(input: { id: 1, price: 219.90, stock: 8 }) {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# Listar todos os produtos
+query ProductsAll {
+  products {
+    id
+    name
+    price
+    stock
+    createdAt
+  }
+}
+
+# Página de produtos com filtros e ordenação
+query ProductsPageFiltered(
+  $page: Int = 1
+  $limit: Int = 5
+  $name: String = "prod"
+  $priceMin: Float = 100
+  $priceMax: Float = 400
+) {
+  productsPage(
+    pagination: { page: $page, limit: $limit }
+    filter: {
+      nameContains: $name
+      priceMin: $priceMin
+      priceMax: $priceMax
+      stockMin: 1
+    }
+    sort: { field: PRICE, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      name
+      price
+      stock
+      createdAt
+    }
+  }
+}
+
+############################################
+# USERS
+############################################
+
+# (ADMIN) Criar usuário
+mutation CreateUser {
+  createUser(
+    input: {
+      name: "Maria Admin"
+      email: "maria.admin@acme.com"
+      password: "admin123"
+      role: ADMIN
+    }
+  ) {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# (ADMIN) Atualizar usuário
+mutation UpdateUser {
+  updateUser(input: { id: 2, name: "User Renomeado", role: USER }) {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# Listar todos os usuários
+query UsersAll {
+  users {
+    id
+    name
+    email
+    role
+    createdAt
+  }
+}
+
+# Página de usuários com filtros e ordenação
+query UsersPageFiltered(
+  $page: Int = 1
+  $limit: Int = 10
+  $role: Role = USER
+  $from: DateTime = "2025-09-01T00:00:00.000Z"
+) {
+  usersPage(
+    pagination: { page: $page, limit: $limit }
+    filter: { role: $role, nameContains: "a", createdAt: { from: $from } }
+    sort: { field: NAME, direction: ASC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      name
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+############################################
+# ORDERS
+############################################
+
+# (USER/ADMIN) Criar pedido
+mutation PlaceOrder {
+  placeOrder(
+    input: {
+      items: [{ productId: 1, quantity: 2 }, { productId: 2, quantity: 1 }]
+    }
+  ) {
+    id
+    userId
+    total
+    createdAt
+    items {
+      id
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (ADMIN) Listar todos os pedidos
+query OrdersAll {
+  orders {
+    id
+    userId
+    total
+    createdAt
+    items {
+      id
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (USER/ADMIN) Meus pedidos
+query MyOrders {
+  myOrders {
+    id
+    total
+    createdAt
+    items {
+      productId
+      quantity
+      price
+    }
+  }
+}
+
+# (ADMIN) Página de pedidos com filtros e ordenação
+query OrdersPageFiltered($page: Int = 1, $limit: Int = 5, $userId: Int = 1) {
+  ordersPage(
+    pagination: { page: $page, limit: $limit }
+    filter: {
+      userId: $userId
+      totalMin: 50
+      totalMax: 1000
+      createdAt: { from: "2025-08-01T00:00:00.000Z" }
+    }
+    sort: { field: TOTAL, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      userId
+      total
+      createdAt
+      items {
+        id
+        productId
+        quantity
+        price
+      }
+    }
+  }
+}
+
+# (USER/ADMIN) Minha página de pedidos
+query MyOrdersPage($page: Int = 1, $limit: Int = 5) {
+  myOrdersPage(
+    pagination: { page: $page, limit: $limit }
+    filter: { totalMin: 0, createdAt: { from: "2025-08-20T00:00:00.000Z" } }
+    sort: { field: CREATED_AT, direction: DESC }
+  ) {
+    total
+    page
+    limit
+    hasNext
+    items {
+      id
+      total
+      createdAt
+      items {
+        productId
+        quantity
+        price
+      }
+    }
+  }
+}
+
+############################################
+# TESTE DE ERRO OUT_OF_STOCK
+############################################
+
+mutation OutOfStock {
+  placeOrder(input: { items: [{ productId: 1, quantity: 9999 }] }) {
+    id
+  }
+}
+
+```
